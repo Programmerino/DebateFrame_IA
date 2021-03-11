@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en" class="uk-background-muted uk-background-cover">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+
+    <title>DebateFrame</title>
+    <!-- VENDOR THIS -->
+    <script
+        src="https://rawcdn.githack.com/131072/mammoth.js/e5ee8515eb4195269e434698a8a8407f2f0e12e0/mammoth.browser.min.js"></script>
+    <script src="./bundle.js"></script>
+</head>
+
+<body>
+    <div class="hcenter" id="title">
+        <h1>DebateFrame</h1>
+    </div>
+    <div id="setup" class="vcenter hcenter">
+    </div>
+    <div id="docPlace" style="display:none">
+
+    </div>
+    <ul uk-switcher="animation: uk-animation-slide-left-medium, uk-animation-slide-right-medium"
+        class="uk-subnav uk-subnav-pill" id="switcher">
+        <li><a href="#">Document</a></li>
+        <li><a href="#">Flow</a></li>
+    </ul>
+    <div id="document" class="uk-switcher uk-margin" uk-height-viewport="expand: true">
+        <!--Actual document-->
+        <div uk-grid="" class="uk-grid-collapse uk-flex-row" style="width: 100%;">
+            <div class="uk-card uk-card-body uk-grid-small" id="appSideBar">
+            </div>
+            <div class="uk-flex-row uk-width-expand" style="height: 100%;">
+                <ul id="doctab" uk-tab="connect: .docSwitcher">
+                </ul>
+                <ul class="uk-switcher docSwitcher" id="editorSwitcher">
+                    <!--
+                    <div class="uk-card uk-card-body" id="editorCont">
+                        <div id="toolbar">
+                            <a href="#" uk-icon="icon: download; ratio: 2" class="uk-icon" id="downButton"></a>
+                        </div>
+                        <div id="editor">
+                        </div>
+                        <div id="cardview">
+                        </div>
+                    </div>
+                    -->
+                </ul>
+            </div>
+
+            <ul class="uk-switcher docSwitcher uk-width-1-5" id="tocSwitcher">
+                <!--
+                    <div class="uk-card uk-card-body" id="tocCont" uk-height-viewport="expand: true">
+                        <div id="toc" uk-sticky="offset: 100"></div>
+                    </div>
+                -->
+            </ul>
+        </div>
+
+        <!--Flow-->
+        <div>
+            <h1>This features is not yet implemented</h1>
+        </div>
+    </div>
+
+    <div id="modal-cors" uk-modal="">
+        <div class="uk-modal-dialog uk-modal-body">
+            <h2 class="uk-modal-title">CORS is enabled</h2>
+            <p>Certain features do not work properly without CORS disabled on this webpage! Please use <a
+                    href="https://addons.mozilla.org/en-US/firefox/addon/accesscontrol-allow-all-origin/?src=search">this
+                    extension</a> and whitelist this webpage, otherwise unexpected behavior may occur</p>
+            <p class="uk-text-right">
+                <button class="uk-button uk-button-default uk-modal-close" type="button">Ok</button>
+            </p>
+        </div>
+    </div>
+
+    <div id="modal-mammothload" uk-modal="">
+        <div class="uk-modal-dialog uk-modal-body">
+            <h2 class="uk-modal-title">Your document is being converted to DebateFrame format...</h2>
+            <p>This may take a while depending on the speed of your computer, and how large the file is.</p>
+            <i>Note: To make this faster in the future, use the native DebateFrame format .dfc by clicking the save
+                button on the top right</i>
+        </div>
+    </div>
+
+    <div id="modal-workerfail" uk-modal="">
+        <div class="uk-modal-dialog uk-modal-body">
+            <h2 class="uk-modal-title">There was an issue setting up offline access...</h2>
+            <p>Please check your browsers privacy settings regarding Service Workers and try again. For more
+                information, please check the Developer's Console</p>
+            <p>Keep in mind that this website will fail to work when your computer's internet turns off without this
+                feature...</p>
+            <p class="uk-text-right">
+                <button class="uk-button uk-button-default uk-modal-close" type="button">Ok</button>
+            </p>
+        </div>
+    </div>
+
+    <div id="modal-panic" uk-modal="">
+        <div class="uk-modal-dialog uk-modal-body">
+            <h2 class="uk-modal-title">Uh oh! An error has occurred</h2>
+            <p>Something went wrong. Certain features will be non-responsive until you refresh the page. If this issue
+                continues to happen, please
+                report this issue at <a href="https://gitlab.com/256/DebateFrame">our GitLab repository</a>.</p>
+            <p class="uk-text-right">
+                <button class="uk-button uk-button-default uk-modal-close" type="button">Ok</button>
+            </p>
+        </div>
+    </div>
+
+    <div id="modal-loading" class="uk-flex-top" uk-modal="bg-close: false; esc-close: false;">
+        <div class="uk-modal-dialog uk-modal-body uk-margin-auto-vertical">
+            <span uk-spinner="ratio: 4.5"></span>
+        </div>
+    </div>
+</body>
+
+</html>

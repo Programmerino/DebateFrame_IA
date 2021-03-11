@@ -1,0 +1,437 @@
+package trix
+
+import (
+	"fmt"
+	"syscall/js"
+
+	"gitlab.com/256/DebateFrame/client/state"
+
+	"github.com/dennwc/dom"
+	domJS "github.com/dennwc/dom/js"
+)
+
+var deps = []string{
+	"https://cdn.jsdelivr.net/gh/basecamp/trix/dist/trix.min.js",
+	"https://cdn.jsdelivr.net/gh/basecamp/trix/dist/trix.min.css",
+}
+
+func init() {
+	err := state.RequireList(deps)
+	if err != nil {
+		panic(err)
+	}
+}
+
+// Editor contains the editor instance
+type Editor struct {
+	element *dom.Element
+	js      *js.Value
+}
+
+// GetEditorByID retrieves an editor instance based on an ID
+func GetEditorByID(id string) (*Editor, error) {
+	editorElem := dom.GetDocument().GetElementById(id)
+	if editorElem == nil {
+		return nil, fmt.Errorf("given ID does not exist")
+	}
+	editorInst := editorElem.JSRef().Get("editor")
+	if badResponse(editorInst) {
+		return nil, fmt.Errorf("failed to get the editor from the element: null or undefined response")
+	}
+	return &Editor{element: editorElem, js: &editorInst}, nil
+}
+
+// ElementToEditor converts an element to an editor instance
+func ElementToEditor(elem *dom.Element) (*Editor, error) {
+	jVal := elem.JSRef()
+	return &Editor{element: elem, js: &jVal}, nil
+}
+
+// Document is an instance of Trix.Document
+type Document struct {
+	parent *Editor
+	js     *js.Value
+}
+
+// GetDocument returns a document instance
+func (editor *Editor) GetDocument() *Document {
+	doc := editor.js.Call("getDocument")
+	if badResponse(doc) {
+		panic("failed to get the document from the editor: null or undefined response")
+	}
+	return &Document{parent: editor, js: &doc}
+}
+
+func (doc *Document) String() string {
+	jString := doc.js.Call("toString")
+	if badResponse(jString) {
+		panic("failed to get string from document: null or undefined response")
+	}
+	return jString.String()
+}
+
+// IsEqualTo evaluates if two documents are the same
+func (doc *Document) IsEqualTo(doc2 *Document) bool {
+	jBool := doc.js.Call("isEqualTo", doc2.js)
+	if badResponse(jBool) {
+		panic("failed to evaluate equality of documents: null or undefined response")
+	}
+	return jBool.Bool()
+}
+
+// Range describes a position/selection in the editor
+type Range struct {
+	Selection bool // True if it is a selection, false if it is a cursor
+	startPos  int
+	endPos    int
+}
+
+// GetSelectedRange gets the range that is current selected, or where the cursor is at (collapsed)
+func (editor *Editor) GetSelectedRange() *Range {
+	start := editor.js.Call("getSelectedRange").Index(0)
+	if badResponse(start) {
+		panic("failed to get start position from selection: null or undefined response")
+	}
+	end := editor.js.Call("getSelectedRange").Index(1)
+	if badResponse(start) {
+		panic("failed to get end position from selection: null or undefined response")
+	}
+	startInt := start.Int()
+	endInt := end.Int()
+
+	return &Range{Selection: startInt != endInt, startPos: startInt, endPos: endInt}
+}
+
+// SetSelectedRange sets the current selection
+func (editor *Editor) SetSelectedRange(r Range) {
+	if !r.Selection {
+		r.endPos = r.startPos
+	}
+
+	array := []int{r.startPos, r.endPos}
+
+	editor.js.Call("setSelectedRange", array)
+}
+
+// NewCursorRange creates a new range from a cursor position
+func NewCursorRange(pos int) *Range {
+	rng := NewSelectionRange(pos, pos)
+	rng.Selection = false
+	return rng
+}
+
+// NewSelectionRange creates a nwe range from a start and end point for a selection
+func NewSelectionRange(start int, end int) *Range {
+	return &Range{Selection: true, startPos: start, endPos: end}
+}
+
+// Direction type specifies whether to move either the cursor or the selection forwards or backwards
+type Direction int
+
+const (
+	// Forward direction
+	Forward Direction = iota + 1
+	// Backward direction
+	Backward
+)
+
+// MoveCursor moves the cursor in the specified direction
+func (editor *Editor) MoveCursor(dir Direction) {
+	switch dir {
+	case Forward:
+		editor.js.Call("moveCursorInDirection", "forward")
+	case Backward:
+		editor.js.Call("moveCursorInDirection", "backward")
+	}
+}
+
+// ExpandSelection expands the selection forward or backwards in the document
+func (editor *Editor) ExpandSelection(dir Direction) {
+	switch dir {
+	case Forward:
+		editor.js.Call("expandSelectionInDirection", "forward")
+	case Backward:
+		editor.js.Call("expandSelectionInDirection", "backward")
+	}
+}
+
+// Delete deletes a character in the document, either forward or behind the cursor
+func (editor *Editor) Delete(dir Direction) {
+	switch dir {
+	case Forward:
+		editor.js.Call("deleteInDirection", "forward")
+	case Backward:
+		editor.js.Call("deleteInDirection", "backward")
+	}
+}
+
+// DOMRect is the Golang implementation of *DOMRect from JavaScript
+type DOMRect struct {
+	*js.Value
+}
+
+// X retrieves the X coordinate of the *DOMRect
+func (r *DOMRect) X() float64 {
+	return r.Get("x").Float()
+}
+
+// Y retrieves the Y coordinate of the *DOMRect
+func (r *DOMRect) Y() float64 {
+	return r.Get("y").Float()
+}
+
+// Width retrieves the width of the *DOMRect
+func (r *DOMRect) Width() float64 {
+	return r.Get("width").Float()
+}
+
+// Height retrieves the height of the *DOMRect
+func (r *DOMRect) Height() float64 {
+	return r.Get("height").Float()
+}
+
+// Top retrieves the Y coordinate of the top of the *DOMRect
+func (r *DOMRect) Top() float64 {
+	return r.Get("top").Float()
+}
+
+// Right retrieves the X coordinate of the right of the *DOMRect
+func (r *DOMRect) Right() float64 {
+	return r.Get("right").Float()
+}
+
+// Bottom retrieves the Y coordinate of the bottom of the *DOMRect
+func (r *DOMRect) Bottom() float64 {
+	return r.Get("bottom").Float()
+}
+
+// Left retrieves the X coordinate of the left of the *DOMRect
+func (r *DOMRect) Left() float64 {
+	return r.Get("left").Float()
+}
+
+// GetRectAtPos gets a DOMRect "representing the left and top offsets, width,
+// and height of the character at the given position"
+func (editor *Editor) GetRectAtPos(pos int) *DOMRect {
+	res := editor.js.Call("getClientRectAtPosition", pos)
+	if badResponse(res) {
+		panic("failed to DOMRect: null or undefined response")
+	}
+	return &DOMRect{&res}
+}
+
+// InsertString inserts the string given at the current selection ranges (or cursor)
+func (editor *Editor) InsertString(str string) {
+	editor.js.Call("insertString", str)
+}
+
+// InsertRawHTML inserts HTML at the current selection range or cursor
+func (editor *Editor) InsertRawHTML(html string) {
+	editor.js.Call("insertHTML", html)
+}
+
+// InsertNode is a convience function to allow DOM nodes to be inserted
+func (editor *Editor) InsertNode(node *dom.Node) {
+	ref := (*node).JSRef()
+	html := ref.Call("toString")
+	if badResponse(html) {
+		panic("failed to get DOM node string: null or undefined response")
+	}
+	htmlString := html.String()
+	editor.InsertRawHTML(htmlString)
+}
+
+// InsertFile is unimplemented
+func (editor *Editor) InsertFile() {
+	panic("unimplemented")
+}
+
+type attachment struct {
+	content string
+}
+
+// InsertAttachment inserts a content attachment with the rules below
+/*
+Content attachments are self-contained units of HTML that behave like files in the editor.
+They can be moved or removed, but not edited directly, and are represented by a single
+character position in the document model.
+The HTML inside a content attachment is not subject to Trix’s document conversion
+rules and will be rendered as-is.
+*/
+func (editor *Editor) InsertAttachment(html string) {
+	at := js.Global().Get("Trix").Call("Attachment", attachment{html})
+	if badResponse(at) {
+		panic("failed to get generate attachment: null or undefined response")
+	}
+	editor.js.Call("insertAttachment", at)
+}
+
+// InsertLineBreak inserts a \n character, aka a newline
+func (editor *Editor) InsertLineBreak() {
+	editor.js.Call("insertLineBreak")
+}
+
+/*
+Attributes:
+Trix represents formatting as sets of attributes applied across ranges of a document.
+
+By default, Trix supports the inline attributes bold, italic, href, and strike, and
+the block-level attributes heading1, quote, code, bullet, and number.
+*/
+
+// Attribute is an enum with all available attribute options
+type Attribute string
+
+// Href is in the seperate function URLify()
+const (
+	Bold     = "bold"
+	Italic   = "italic"
+	Strike   = "strike"
+	Heading1 = "heading1"
+	Quote    = "quote"
+	Code     = "code"
+	Bullet   = "bullet"
+	Number   = "number"
+)
+
+// ActivateAttribute makes the selected range a certain attribute, or the next inserted text
+func (editor *Editor) ActivateAttribute(attr Attribute) {
+	editor.js.Call("activateAttribute", string(attr))
+}
+
+// DeactivateAttribute remove a certain attribute from the selected range, or the next inserted text
+func (editor *Editor) DeactivateAttribute(attr Attribute) {
+	editor.js.Call("deactivateAttribute", string(attr))
+}
+
+// URLify makes the selected range a link with the specified url, or the next inserted text
+func (editor *Editor) URLify(url string) {
+	editor.js.Call("activateAttribute", "href", url)
+}
+
+// DeURL removes the link from the current selection, or the next inserted text
+func (editor *Editor) DeURL() {
+	editor.js.Call("deactivateAttribute", "href")
+}
+
+// IncreaseNestingLevel increases the nesting level for quotes, and lists
+func (editor *Editor) IncreaseNestingLevel() {
+	editor.js.Call("increaseNestingLevel")
+}
+
+// DecreaseNestingLevel decreases the nesting level for quotes, and lists
+func (editor *Editor) DecreaseNestingLevel() {
+	editor.js.Call("DecreaseNestingLevel")
+}
+
+/*
+Using Undo and Redo:
+Trix editors support unlimited undo and redo. Successive typing and
+formatting changes are consolidated together at five-second intervals; all
+other input changes are recorded individually in undo history.
+*/
+
+// Undo undoes the last five-second interval of changes
+func (editor *Editor) Undo() {
+	editor.js.Call("undo")
+}
+
+// Redo undoes the last undo
+func (editor *Editor) Redo() {
+	editor.js.Call("redo")
+}
+
+// RecordUndoEntry adds new text to the undo entry list
+/*
+Changes you make through the editor interface will not automatically record
+entries. You can save your own undo entries by calling the RecordUndoEntry
+method with a description argument.
+*/
+func (editor *Editor) RecordUndoEntry(disc string) {
+	editor.js.Call("recordUntoEntry", disc)
+}
+
+/*
+Serialize an editor’s state with JSON() and restore saved state
+with the LoadJSON() method. The serialized state includes the document
+and current selection, but does not include undo history.
+*/
+
+// JSON converts the editor state into a JSON string
+func (editor *Editor) JSON() string {
+	json := js.Global().Get("JSON").Call("stringify", editor.js)
+	if badResponse(json) {
+		panic("failed to get generate attachment: null or undefined response")
+	}
+	jsonString := json.String()
+	return jsonString
+}
+
+// LoadJSON restores the editor state from the JSON string provided
+func (editor *Editor) LoadJSON(json string) {
+	editor.js.Call("loadJSON", json)
+}
+
+// badResponse returns true if the value is undefined or null
+func badResponse(val js.Value) bool {
+	return val.Type() == js.TypeUndefined || val.Type() == js.TypeNull
+}
+
+// BeforeInit fires the given function when the <trix-editor>
+// element is attached to the DOM just before Trix installs
+// its editor object.
+func (editor *Editor) BeforeInit(fn func()) {
+	newEvent(editor.toDomElem(), "trix-before-initalize", fn)
+}
+
+// OnChange fires whenever the editor’s contents have changed.
+func (editor *Editor) OnChange(fn func()) {
+	newEvent(editor.toDomElem(), "trix-change", fn)
+}
+
+// OnInit fires when the <trix-editor> element is attached to the DOM and its editor object is ready for use.
+func (editor *Editor) OnInit(fn func()) {
+	newEvent(editor.toDomElem(), "trix-initialize", fn)
+}
+
+// OnSelectionChange fires any time the selected range changes in the editor.
+func (editor *Editor) OnSelectionChange(fn func()) {
+	newEvent(editor.toDomElem(), "trix-selection-change", fn)
+}
+
+// OnFocus fires when the editor gains focus
+func (editor *Editor) OnFocus(fn func()) {
+	newEvent(editor.toDomElem(), "trix-focus", fn)
+}
+
+// OnBlur fires when the editor loses focus
+func (editor *Editor) OnBlur(fn func()) {
+	newEvent(editor.toDomElem(), "trix-blur", fn)
+}
+
+// OnFileAccept is not supported
+func (editor *Editor) OnFileAccept(fn func()) {
+	panic("files are not supported!")
+}
+
+// OnAttachmentAdd is not supported
+func (editor *Editor) OnAttachmentAdd(fn func()) {
+	panic("attachments are not supported!")
+}
+
+// OnAttachmentRemove is not supported
+func (editor *Editor) OnAttachmentRemove(fn func()) {
+	panic("attachments are not supported!")
+}
+
+func (editor *Editor) toDomElem() *dom.Element {
+	domEditor := domJS.Value{*editor.js}
+	elem := dom.AsElement(domEditor)
+	return elem
+}
+
+func newEvent(elem *dom.Element, name string, fn func()) {
+	elem.AddEventListener(name, func(e dom.Event) {
+		fn()
+	})
+}

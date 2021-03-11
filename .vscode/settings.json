@@ -1,0 +1,23 @@
+{
+    "go.useLanguageServer": true,
+    "go.languageServerExperimentalFeatures": {
+        "format": true,
+        "autoComplete": true,
+        "rename": true,
+        "goToDefinition": true,
+        "hover": true,
+        "signatureHelp": true,
+        "goToTypeDefinition": true,
+        "goToImplementation": true,
+        "documentSymbols": true,
+        "workspaceSymbols": true,
+        "findReferences": true,
+        "diagnostics": false
+    },
+    "go.lintTool": "golangci-lint",
+    "go.toolsEnvVars": {
+        "GOOS": "js",
+        "GOARCH": "wasm",
+    },
+    "go.installDependenciesWhenBuilding": false,
+}
